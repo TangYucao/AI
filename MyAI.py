@@ -9,7 +9,7 @@
 #
 # NOTES: 		- MyAI inherits from the abstract AI class in AI.py.
 #
-#tyc			- DO NOT MAKE CHANGES TO THIS FILE.
+#				- DO NOT MAKE CHANGES TO THIS FILE.
 # ==============================CS-199==================================
 
 from AI import AI
@@ -42,9 +42,9 @@ class MyAI( AI ):
 		self.rowDimension = rowDimension
 		self.colDimension = colDimension
 		self.moveCount = 0
-		print( "totalMines:"+str(totalMines))
-		print ("startX:"+str(startX))
-		print ("startY:"+str(startY))
+		# print( "totalMines:"+str(totalMines))
+		# print ("startX:"+str(startX))
+		# print ("startY:"+str(startY))
 		self.visited = np.zeros((rowDimension, colDimension))#0 not visited 1 visited
 		self.board = np.full((rowDimension, colDimension), self.myBoard.UNCOVER)
 
@@ -53,12 +53,12 @@ class MyAI( AI ):
 		self.lastAction=self.myAction.UNCOVER
 		self.visited[startX][startY]=1
 		self.debug=True
-		print(self.visited[startX][startX])
+		# print(self.visited[startX][startX])
 		pass
 		########################################################################
 		#							YOUR CODE ENDS							   #
 		########################################################################
-		#test git2
+		
 	
 	def getAction(self, number: int) -> "Action Object":
 		########################################################################
@@ -68,24 +68,26 @@ class MyAI( AI ):
 		if number==-1 or self.lastAction==self.myAction.FLAG:#if last step is FLAG mine
 			self.updateboardboob(self.lastX,self.lastY)
 			# print("debug:FLAG Number is:"+str(number))
+			self.printBoardInfo(False) 
+
 		if number!=-1:
 			FLAGnum=self.countSurroundingTarget(self.lastX,self.lastY,self.myBoard.FLAGBOMB)
 			self.board[self.lastX][self.lastY]=number-FLAGnum
 			if number-FLAGnum==0:
 				self.updateboard(self.visited,self.lastX,self.lastY,self.board,number-FLAGnum)
-		self.printBoardInfo(False)
+		# self.printBoardInfo(False) 
 		for i in range(self.rowDimension):
 			for j in range(self.colDimension):
 				# print("%d:%d",i,j)		
 				if self.visited[i][j]==0  and  self.board[i][j]==self.myBoard.UNCOVERSAFE:
-					self.visited[i][j]=1;
+					self.visited[i][j]=1; 
 					self.lastX=i;
 					self.lastY=j;
 					self.lastAction=self.myAction.UNCOVER
 					return Action(AI.Action.UNCOVER,i,j)
 		#---------------code above uncovered all available space.
 
-		#deal with concave, like:
+		#deal with concave, like: 
 		#1 ? 1
 		#1 1 1
 		targetX,targetY=self.dealwithconcave();
@@ -97,12 +99,61 @@ class MyAI( AI ):
 			# print("targetX:%d,targetY:%d,board value:%d"%(targetX,targetY,self.board[targetX][targetY]))
 			self.lastAction=self.myAction.FLAG
 			return Action(AI.Action.FLAG,targetX,targetY)
-		#todo: deal with boarder problems where two 1 line together.
-
+		# -----------------todo: deal with boarder problems where two 1 line together.
+		'''
+		0 0 1 ?
+		1 1 1 ?
+		? ? ? ?
+		'''
+		for i in range(self.rowDimension):
+			for j in range(self.colDimension):
+				# print("%d:%d",i,j)		
+				if self.visited[i][j]==1  and self.board[i][j]==1:
+					toflagX,toflagY=self.linear(i,j,4)#return next flag position.
+					if toflagX==-1:
+						continue
+					# print("success!start point:%d,%d next flag:%d,%d"%(i+1,j+1,toflagX+1,toflagY+1))
+					self.visited[toflagX][toflagY]=1;
+					self.lastX=toflagX;
+					self.lastY=toflagY;
+					self.board[toflagX][toflagY]=self.myBoard.FLAGBOMB
+					self.lastAction=self.myAction.FLAG
+					return Action(AI.Action.FLAG,toflagX,toflagX)
 		return Action(AI.Action.LEAVE)
 		########################################################################
 		#							YOUR CODE ENDS							   #
 		########################################################################
+	def linear(self,i,j,count):
+		'''
+		1->1->1
+		or
+		1
+		1
+		1
+		'''
+		tmpj=j+1;
+		while tmpj<self.colDimension:
+			if self.board[i][tmpj]!=1:
+				tmpj-=1
+				break
+			tmpj+=1
+		if tmpj-j+1==count:
+			if i<self.rowDimension-1 and self.board[i+1][j+1]==-1 :
+				return i+1,j+1
+			if i>0 and  self.board[i-1][j]==-1:
+				return i-1,j+1
+		tmpi=i+1;
+		while tmpi<self.rowDimension :
+			if self.board[tmpi][j]!=1:
+				tmpi-=1
+				break
+			tmpi+=1
+		if tmpi-i+1==count:
+			if j<self.rowDimension-1 and self.board[i][j+1]==-1 :
+				return i+1,j+1
+			if j>0 and self.board[i][j-1]==-1:
+				return i+1,j-1
+		return -1,-1
 	def updateboard(self,visited,i,j,board,number):
 		# for l in range(j,0):#left
 			# if board[][j]:
@@ -168,7 +219,7 @@ class MyAI( AI ):
 
 
 	def printBoardInfo(self,boolvisited) -> None:
-		""" Print board for debugging """
+		""" Print board for debugging """ 
 		board_as_string = ""
 		print("-----------myBoard---------")
 		for r in range(self.rowDimension - 1, -1, -1):
@@ -218,25 +269,23 @@ class MyAI( AI ):
 	def dealwithconcave(self):
 		for i in range(self.rowDimension):
 			for j in range(self.colDimension):
-				if self.board[i][j]==1:
-					if self.countSurroundingTarget(i,j,self.myBoard.UNCOVER)==1:#find unknown
-						if i>0 and self.board[i-1][j]==self.myBoard.UNCOVER:
-							return i-1,j
-						if j>0 and self.board[i][j-1]==self.myBoard.UNCOVER:
-							return i,j-1
-						if i<self.rowDimension-1 and self.board[i+1][j]==self.myBoard.UNCOVER:
-							return i+1,j
-						if j<self.colDimension-1 and self.board[i][j+1]==self.myBoard.UNCOVER:
-							return i,j+1
-						if i>0 and j>0 and self.board[i-1][j-1]==self.myBoard.UNCOVER:
-							return i-1,j-1
-						if i>0 and j<self.colDimension-1 and self.board[i-1][j+1]==self.myBoard.UNCOVER:	
-							return i-1,j+1
-						if i<self.rowDimension-1 and j>0 and self.board[i+1][j-1]==self.myBoard.UNCOVER:	
-							return i+1,j-1
-						if i<self.rowDimension-1 and j<self.colDimension-1 and self.board[i+1][j+1]==self.myBoard.UNCOVER:	
-							return i+1,j+1
-
+				if self.countSurroundingTarget(i,j,self.myBoard.UNCOVER)==self.board[i][j]:#find unknown
+					if i>0 and self.board[i-1][j]==self.myBoard.UNCOVER:
+						return i-1,j
+					if j>0 and self.board[i][j-1]==self.myBoard.UNCOVER:
+						return i,j-1
+					if i<self.rowDimension-1 and self.board[i+1][j]==self.myBoard.UNCOVER:
+						return i+1,j
+					if j<self.colDimension-1 and self.board[i][j+1]==self.myBoard.UNCOVER:
+						return i,j+1
+					if i>0 and j>0 and self.board[i-1][j-1]==self.myBoard.UNCOVER:
+						return i-1,j-1
+					if i>0 and j<self.colDimension-1 and self.board[i-1][j+1]==self.myBoard.UNCOVER:	
+						return i-1,j+1
+					if i<self.rowDimension-1 and j>0 and self.board[i+1][j-1]==self.myBoard.UNCOVER:	
+						return i+1,j-1
+					if i<self.rowDimension-1 and j<self.colDimension-1 and self.board[i+1][j+1]==self.myBoard.UNCOVER:	
+						return i+1,j+1
 
 
 

@@ -7,7 +7,7 @@
 #				the user to play Minesweeper manually, instead of using
 #				an agent. This mode should be used to familiarize your-
 #				self with the game and its mechanics.
-#
+#  
 # NOTES: 		- List of actions/commands can be found in Action.py
 #
 #				- This agent is run using the -m flag
