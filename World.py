@@ -110,7 +110,7 @@ class World():
 		self.__uncoverAll()
 		if type(self.__ai) == ManualAI or self.__debug:
 			self.__printWorld()
-		self.__printBoardInfo()
+		# self.__printBoardInfo()#todo :THIS LINE IS FOR DEBUG!
 		if self.__score == (self.__colDimension * self.__rowDimension) - self.__totalMines:
 			if self.__rowDimension == 8 and self.__colDimension == 8:
 				return 1

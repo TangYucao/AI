@@ -30,7 +30,7 @@ class MyAI( AI ):
 		FLAG bomb =-3
 		covered(not bomb)>= 0. if>=1 then mine is in surrounding 
 		'''
-		NOBOOM = 0
+		# NOBOOM = 0
 		UNCOVER = -1
 		UNCOVERSAFE = -2
 		FLAGBOMB = -3
@@ -39,19 +39,23 @@ class MyAI( AI ):
 		########################################################################
 		#							YOUR CODE BEGINS						   #
 		########################################################################
-		self.rowDimension = rowDimension
-		self.colDimension = colDimension
+		self.rowDimension = colDimension
+		self.colDimension = rowDimension
 		self.moveCount = 0
 		# print( "totalMines:"+str(totalMines))
 		# print ("startX:"+str(startX))
 		# print ("startY:"+str(startY))
-		self.visited = np.zeros((rowDimension, colDimension))#0 not visited 1 visited
-		self.board = np.full((rowDimension, colDimension), self.myBoard.UNCOVER)
+		# print ("rowDimension:"+str(self.rowDimension))
+		# print ("colDimension:"+str(self.colDimension))
 
+		self.visited = np.zeros((self.rowDimension, self.colDimension))#0 not visited 1 visited
+		self.board = np.full((self.rowDimension, self.colDimension), self.myBoard.UNCOVER)
+		self.totalMines=totalMines;
 		self.lastX=startX;
 		self.lastY=startY;
+		self.visited[self.lastX][self.lastY]=1;
 		self.lastAction=self.myAction.UNCOVER
-		self.visited[startX][startY]=1
+		# self.visited[startX][startY]=1
 		self.debug=True
 		# print(self.visited[startX][startX])
 		pass
@@ -64,32 +68,35 @@ class MyAI( AI ):
 		########################################################################
 		#							YOUR CODE BEGINS						   #
 		########################################################################
-		print("last action:",self.lastAction,"pos:%d,%d"%(self.lastX+1,self.lastY+1))
+		# print("last action:",self.lastAction,"pos:%d,%d"%(self.lastX+1,self.lastY+1))
 		if number==-1 or self.lastAction==self.myAction.FLAG:#if last step is FLAG mine
-			self.updateboardboob(self.lastX,self.lastY)
+			self.updateboardboomb(self.lastX,self.lastY)
 			# print("debug:FLAG Number is:"+str(number))
-			self.printBoardInfo(False) 
+			# self.printBoardInfo(False) 
 
 		if number!=-1:
+
 			FLAGnum=self.countSurroundingTarget(self.lastX,self.lastY,self.myBoard.FLAGBOMB)
+
 			self.board[self.lastX][self.lastY]=number-FLAGnum
 			if number-FLAGnum==0:
 				self.updateboard(self.visited,self.lastX,self.lastY,self.board,number-FLAGnum)
-		# self.printBoardInfo(False) 
-		for i in range(self.rowDimension):
+
+		for i in range(self.rowDimension):#uncover safe space.
 			for j in range(self.colDimension):
 				# print("%d:%d",i,j)		
-				if self.visited[i][j]==0  and  self.board[i][j]==self.myBoard.UNCOVERSAFE:
+				if self.visited[i][j]==0  and  (self.board[i][j]==self.myBoard.UNCOVERSAFE or self.totalMines==0):
 					self.visited[i][j]=1; 
 					self.lastX=i;
 					self.lastY=j;
 					self.lastAction=self.myAction.UNCOVER
 					return Action(AI.Action.UNCOVER,i,j)
+		# self.printBoardInfo(False) #DEBUG
 		#---------------code above uncovered all available space.
-
 		#deal with concave, like: 
-		#1 ? 1
-		#1 1 1
+		#B ? ?
+		#B 2 B 
+		#B B B
 		targetX,targetY=self.dealwithconcave();
 		if targetX>=0:
 			self.visited[targetX][targetY]=1;
@@ -98,92 +105,107 @@ class MyAI( AI ):
 			self.board[targetX][targetY]=self.myBoard.FLAGBOMB
 			# print("targetX:%d,targetY:%d,board value:%d"%(targetX,targetY,self.board[targetX][targetY]))
 			self.lastAction=self.myAction.FLAG
+			self.totalMines=self.totalMines-1
 			return Action(AI.Action.FLAG,targetX,targetY)
-		# -----------------todo: deal with boarder problems where two 1 line together.
-		'''
-		0 0 1 ?
-		1 1 1 ?
-		? ? ? ?
-		'''
-		for i in range(self.rowDimension):
+		# -----------------todo: Assumtion: if this one is the boomb.
+		backboard =self.board.copy()
+		backvisited=self.visited.copy()
+		# self.printBoardInfo(False) #DEBUG
+
+		toFLAGplaces=[]
+		for i in range(self.rowDimension):#uncover safe space.
 			for j in range(self.colDimension):
-				# print("%d:%d",i,j)		
-				if self.visited[i][j]==1  and self.board[i][j]==1:
-					toflagX,toflagY=self.linear(i,j,4)#return next flag position.
-					if toflagX==-1:
-						continue
-					# print("success!start point:%d,%d next flag:%d,%d"%(i+1,j+1,toflagX+1,toflagY+1))
-					self.visited[toflagX][toflagY]=1;
-					self.lastX=toflagX;
-					self.lastY=toflagY;
-					self.board[toflagX][toflagY]=self.myBoard.FLAGBOMB
-					self.lastAction=self.myAction.FLAG
-					return Action(AI.Action.FLAG,toflagX,toflagX)
+				if self.visited[i][j]==0:
+					if(self.countSurroundingTarget(i,j,self.myBoard.UNCOVER)==8):continue;#in the middle
+					if (i==0 or i==self.rowDimension-1) and (j==0 or j==self.colDimension-1):#in the cornor
+						if self.countSurroundingTarget(i,j,self.myBoard.UNCOVER)==3:continue;
+					if (i==0 or i==self.rowDimension-1 or j==0 or j==self.colDimension-1):#on the side
+						if self.countSurroundingTarget(i,j,self.myBoard.UNCOVER)==5:continue;
+					if self.assume(i,j,self.myBoard.FLAGBOMB)==True:#assume there is a boomb.
+						toFLAGplaces.append([i,j])
+						self.board=backboard.copy()
+						self.visited=backvisited.copy()
+					else:#we can uncover the place!
+						self.board=backboard.copy()
+						self.visited=backvisited.copy()
+						self.visited[i][j]=1; 
+						self.lastX=i;
+						self.lastY=j;
+						self.lastAction=self.myAction.UNCOVER
+						return Action(AI.Action.UNCOVER,i,j)
+		# self.printBoardInfo(False) #DEBUG
+		#----------------------todo:if only one place can be flagged as boomb,then flag it.
+		if len(toFLAGplaces)==1:
+			# print("toFLAGplaces Size:",len(toFLAGplaces))
+			i=toFLAGplaces[0][0]
+			j=toFLAGplaces[0][1]
+			# print(i+1," ",j+1)
+
+			self.visited[i][j]=1;
+			self.lastX=i;
+			self.lastY=j;
+			self.board[i][j]=self.myBoard.FLAGBOMB
+			self.lastAction=self.myAction.FLAG
+			self.totalMines=self.totalMines-1
+			return Action(AI.Action.FLAG,i,j)
+		#todo:-------------------- calculate toFLAGplaces' probability and flag the 
+		# self.printBoardInfo(False) #DEBUG
+		if len(toFLAGplaces)>=2:
+			map=[]
+			i=0
+			for (x,y) in toFLAGplaces:
+				# print(x+1," ",y+1)
+				map.append(self.calculateProbability(x,y))
+				# print([x+1,y+1]," probability:",map[i])
+				i+=1
+			maxindex=np.argmax(map);#get the biggest probability, flag that pos!
+			i=toFLAGplaces[maxindex][0]
+			j=toFLAGplaces[maxindex][1]
+			self.visited[i][j]=1;
+			self.lastX=i;
+			self.lastY=j;
+			# print(i+1," ",j+1)
+			# self.printBoardInfo(False) #DEBUG
+			self.board[i][j]=self.myBoard.FLAGBOMB
+			self.lastAction=self.myAction.FLAG
+			self.totalMines=self.totalMines-1
+
+			return Action(AI.Action.FLAG,i,j)
+
+
 		return Action(AI.Action.LEAVE)
 		########################################################################
 		#							YOUR CODE ENDS							   #
 		########################################################################
-	def linear(self,i,j,count):
-		'''
-		1->1->1
-		or
-		1
-		1
-		1
-		'''
-		tmpj=j+1;
-		while tmpj<self.colDimension:
-			if self.board[i][tmpj]!=1:
-				tmpj-=1
-				break
-			tmpj+=1
-		if tmpj-j+1==count:
-			if i<self.rowDimension-1 and self.board[i+1][j+1]==-1 :
-				return i+1,j+1
-			if i>0 and  self.board[i-1][j]==-1:
-				return i-1,j+1
-		tmpi=i+1;
-		while tmpi<self.rowDimension :
-			if self.board[tmpi][j]!=1:
-				tmpi-=1
-				break
-			tmpi+=1
-		if tmpi-i+1==count:
-			if j<self.rowDimension-1 and self.board[i][j+1]==-1 :
-				return i+1,j+1
-			if j>0 and self.board[i][j-1]==-1:
-				return i+1,j-1
-		return -1,-1
 	def updateboard(self,visited,i,j,board,number):
 		# for l in range(j,0):#left
 			# if board[][j]:
 		if number==0:
-			if i>0 and self.board[i-1][j]==-1:
+			if i>0 and self.board[i-1][j]==self.myBoard.UNCOVER:
 				self.board[i-1][j]=self.myBoard.UNCOVERSAFE;
-			if j>0 and self.board[i][j-1]==-1:
+			if j>0 and self.board[i][j-1]==self.myBoard.UNCOVER:
 				self.board[i][j-1]=self.myBoard.UNCOVERSAFE;
-			if i<self.rowDimension-1 and self.board[i+1][j]==-1:
+			if i<self.rowDimension-1 and self.board[i+1][j]==self.myBoard.UNCOVER:
 				self.board[i+1][j]=self.myBoard.UNCOVERSAFE;
-			if j<self.colDimension-1 and self.board[i][j+1]==-1:
+			if j<self.colDimension-1 and self.board[i][j+1]==self.myBoard.UNCOVER:
 				self.board[i][j+1]=self.myBoard.UNCOVERSAFE;
-			if i>0 and j>0 and self.board[i-1][j-1]==-1:	
+			if i>0 and j>0 and self.board[i-1][j-1]==self.myBoard.UNCOVER:	
 				self.board[i-1][j-1]=self.myBoard.UNCOVERSAFE;
-			if i>0 and j<self.colDimension-1 and self.board[i-1][j+1]==-1:	
+			if i>0 and j<self.colDimension-1 and self.board[i-1][j+1]==self.myBoard.UNCOVER:	
 				self.board[i-1][j+1]=self.myBoard.UNCOVERSAFE;
-			if i<self.rowDimension-1 and j>0 and self.board[i+1][j-1]==-1:	
+			if i<self.rowDimension-1 and j>0 and self.board[i+1][j-1]==self.myBoard.UNCOVER:	
 				self.board[i+1][j-1]=self.myBoard.UNCOVERSAFE;
-			if i<self.rowDimension-1 and j<self.colDimension-1 and self.board[i+1][j+1]==-1:	
+			if i<self.rowDimension-1 and j<self.colDimension-1 and self.board[i+1][j+1]==self.myBoard.UNCOVER:	
 				self.board[i+1][j+1]=self.myBoard.UNCOVERSAFE;
 		# return visited,board
-	def updateboardboob(self,i,j):
+	def updateboardboomb(self,i,j):
 		# for l in range(j,0):#left
 			# if board[][j]:
 		newzeroboard=[]
-		if i>0:
-			if self.board[i-1][j]>0: 
-				self.board[i-1][j]-=1 
-				if self.board[i-1][j]==0:
-					newzeroboard.append([i-1,j])
+		if i>0 and self.board[i-1][j]>0: 
+			self.board[i-1][j]-=1 
+			if self.board[i-1][j]==0:
+				newzeroboard.append([i-1,j])
 		if i>0 and j>0 and self.board[i-1][j-1]>0: 
 			self.board[i-1][j-1]-=1
 			if self.board[i-1][j-1]==0:
@@ -294,8 +316,10 @@ class MyAI( AI ):
 		res=0
 		if i>0 and self.board[i-1][j]==target:
 			res+=1
+
 		if j>0 and self.board[i][j-1]==target:
 			res+=1
+
 		if i<self.rowDimension-1 and self.board[i+1][j]==target:
 			res+=1
 		if j<self.colDimension-1 and self.board[i][j+1]==target:
@@ -309,5 +333,42 @@ class MyAI( AI ):
 		if i<self.rowDimension-1 and j<self.colDimension-1 and self.board[i+1][j+1]==target:	
 			res+=1
 		return res;
+	def assume(self,i,j,target):
+		self.visited[i][j]=1;#like we set that to boomb.
+		self.board[i][j]=self.myBoard.FLAGBOMB
+		self.updateboardboomb(i,j)
+		for i in range(self.rowDimension):
+			for j in range(self.colDimension):
+				if self.visited[i][j]==1 and  self.board[i][j]>=1:
+					if self.countSurroundingTarget(i,j,self.myBoard.UNCOVER)<self.board[i][j]:
+						# print("debug:assume ",i+1," ",j+1," ",self.countSurroundingTarget(i,j,self.myBoard.UNCOVER),"!=",self.board[i][j])
+						return False;
+		return True;
+	def calculateProbability(self,i,j):
+		surroundingNumsPos=[]
+		if i>0 and self.board[i-1][j]>0:
+			surroundingNumsPos.append([i-1,j])
+		if j>0 and self.board[i][j-1]>0:
+			surroundingNumsPos.append([i,j-1])
+		if i<self.rowDimension-1 and self.board[i+1][j]>0:
+			surroundingNumsPos.append([i+1,j])
+		if j<self.colDimension-1 and self.board[i][j+1]>0:
+			surroundingNumsPos.append([i,j+1])
+		if i>0 and j>0 and self.board[i-1][j-1]>0:	
+			surroundingNumsPos.append([i-1,j-1])
+		if i>0 and j<self.colDimension-1 and self.board[i-1][j+1]>0:	
+			surroundingNumsPos.append([i-1,j+1])
+		if i<self.rowDimension-1 and j>0 and self.board[i+1][j-1]>0:	
+			surroundingNumsPos.append([i+1,j-1])
+		if i<self.rowDimension-1 and j<self.colDimension-1 and self.board[i+1][j+1]>0:	
+			surroundingNumsPos.append([i+1,j+1])
+		probs=[]
+		tmp=1
+		#todo:calculate P(boomb)=P(A||B||C)=1-P(!A!B!C)=1-P(!A)P(!B)P(!C)
+		for pos in surroundingNumsPos:
+			priorprobability=self.board[pos[0]][pos[1]]/self.countSurroundingTarget(pos[0],pos[1],self.myBoard.UNCOVER)
+			probs.append(priorprobability)
+			tmp=tmp*(1-priorprobability)
 
-
+		# return max(probs)# simply make biggest probability as its probability
+		return 1-tmp
